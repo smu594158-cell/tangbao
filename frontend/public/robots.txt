@@ -1,0 +1,3 @@
+User-agent: *
+Disallow: /generator
+Disallow: /api/v1/generator/preview/

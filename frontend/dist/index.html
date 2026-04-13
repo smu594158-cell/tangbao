@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 杭州旅游助手</title>
+    <!-- 引入高德地图 JS API -->
+    <script type="text/javascript">
+      window._AMapSecurityConfig = {
+        securityJsCode: '9c105a440291b0cf97865116945580d5', // 从环境变量注入 Web端(JSAPI)安全密钥
+      }
+    </script>
+    <!-- 此处的 key 必须是 "Web端(JSAPI)" 类型的 Key，不能与后端 Web服务的 Key 混用 -->
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=4464980ff7048e589394faabea081d35&plugin=AMap.Driving,AMap.Walking,AMap.Transfer,AMap.Bicycling,AMap.PlaceSearch,AMap.Geocoder"></script>
+    <script type="module" crossorigin src="/assets/index-CZB2eDkU.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-C2ZyYo3Y.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

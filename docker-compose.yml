@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: hztour-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: hztour_db
+      MYSQL_USER: hztour_user
+      MYSQL_PASSWORD: hztour_password
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./deploy/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  # Ollama for local LLM (qwen:4b)
+  # Note: Requires pulling the model manually after startup: docker exec -it hztour-ollama ollama run qwen:4b
+  ollama:
+    image: ollama/ollama:latest
+    container_name: hztour-ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # If GPU is available, uncomment the following:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # Loki for Log Aggregation
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: hztour-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
+  # Promtail to send logs to Loki
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: hztour-promtail
+    volumes:
+      - /var/log:/var/log
+    command: -config.file=/etc/promtail/config.yml
+
+  # Grafana for Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hztour-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - loki
+
+  # The Go Backend API Service (Built from source)
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: hztour-backend
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - mysql
+  #     - ollama
+
+volumes:
+  mysql_data:
+  ollama_data:
