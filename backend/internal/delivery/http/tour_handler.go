@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"backend/internal/domain"
+	"backend/internal/usecase"
 	"backend/pkg/errors"
 	"backend/pkg/response"
 	"github.com/gin-gonic/gin"
@@ -12,12 +13,12 @@ import (
 
 // TourHandler 处理旅游景点及内容生成的 HTTP 请求
 type TourHandler struct {
-	usecase domain.TourUsecase
+	tourUseCase usecase.TourUsecase
 }
 
 // NewTourHandler 注册路由
-func NewTourHandler(r *gin.Engine, uc domain.TourUsecase, authMiddleware gin.HandlerFunc) {
-	handler := &TourHandler{usecase: uc}
+func NewTourHandler(r *gin.Engine, uc usecase.TourUsecase, authMiddleware gin.HandlerFunc) {
+	handler := &TourHandler{tourUseCase: uc}
 
 	api := r.Group("/api/v1/tour")
 
@@ -35,13 +36,16 @@ func NewTourHandler(r *gin.Engine, uc domain.TourUsecase, authMiddleware gin.Han
 
 // ListAttractions 获取景点列表 (分页)
 func (h *TourHandler) ListAttractions(c *gin.Context) {
-	pageStr := c.DefaultQuery("page", "1")
-	sizeStr := c.DefaultQuery("size", "10")
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	size, err := strconv.Atoi(c.DefaultQuery("size", "10"))
+	if err != nil || size < 1 {
+		size = 10
+	}
 
-	page, _ := strconv.Atoi(pageStr)
-	size, _ := strconv.Atoi(sizeStr)
-
-	list, total, err := h.usecase.ListAttractions(c.Request.Context(), page, size)
+	list, total, err := h.tourUseCase.ListAttractions(c.Request.Context(), page, size)
 	if err != nil {
 		c.JSON(http.StatusOK, response.Error(errors.ErrInternalServer))
 		return
@@ -64,7 +68,7 @@ func (h *TourHandler) GetAttraction(c *gin.Context) {
 		return
 	}
 
-	attraction, err := h.usecase.GetAttractionInfo(c.Request.Context(), id)
+	attraction, err := h.tourUseCase.GetAttractionInfo(c.Request.Context(), id)
 	if err != nil {
 		if err == errors.ErrNotFound {
 			c.JSON(http.StatusOK, response.Error(errors.ErrNotFound))
@@ -85,7 +89,7 @@ func (h *TourHandler) GenerateContent(c *gin.Context) {
 		return
 	}
 
-	genText, err := h.usecase.GenerateAttractionText(c.Request.Context(), &req)
+	genText, err := h.tourUseCase.GenerateAttractionText(c.Request.Context(), &req)
 	if err != nil {
 		appErr, ok := err.(*errors.AppError)
 		if !ok {

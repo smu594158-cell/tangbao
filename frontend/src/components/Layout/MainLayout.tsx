@@ -5,44 +5,36 @@ import { useEffect, useState } from 'react'
 
 const { Header, Content, Sider } = Layout
 
+const checkAuth = (): { valid: boolean; isAdmin: boolean } => {
+  const token = localStorage.getItem('token')
+  const expiry = localStorage.getItem('token_expiry')
+  if (expiry && new Date().getTime() > parseInt(expiry, 10)) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('token_expiry')
+    localStorage.removeItem('user')
+    return { valid: false, isAdmin: false }
+  }
+  if (!token) return { valid: false, isAdmin: false }
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    return { valid: true, isAdmin: user.role === 9 }
+  } catch {
+    return { valid: !!token, isAdmin: false }
+  }
+}
+
 const MainLayout = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const tokenExpiry = localStorage.getItem('token_expiry')
-    
-    if (!token && location.pathname !== '/login') {
-      navigate('/login')
-      return
+    const { valid, isAdmin: admin } = checkAuth()
+    setIsAdmin(admin)
+    if (!valid && location.pathname !== '/login') {
+      navigate('/login', { replace: true })
     }
-
-    if (tokenExpiry) {
-      const expiry = parseInt(tokenExpiry, 10)
-      if (new Date().getTime() > expiry) {
-        // Token expired
-        localStorage.removeItem('token')
-        localStorage.removeItem('token_expiry')
-        localStorage.removeItem('user')
-        navigate('/login')
-        return
-      }
-    }
-
-    const userStr = localStorage.getItem('user')
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        if (user.role === 9) {
-          setIsAdmin(true)
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-  }, [location.pathname, navigate])
+  }, []) // only run on mount
 
   const handleLogout = () => {
     localStorage.removeItem('token')

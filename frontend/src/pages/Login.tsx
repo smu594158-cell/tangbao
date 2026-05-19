@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Form, Input, Button, message, Tabs } from 'antd'
 import { UserOutlined, LockOutlined, IdcardOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import axios from '../utils/request'
 
 const Login = () => {
   const [loading, setLoading] = useState(false)

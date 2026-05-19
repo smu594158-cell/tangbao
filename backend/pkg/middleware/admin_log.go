@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"bytes"
-	"golang.org/x/net/context"
-	_ "io"
+	"log"
 	"net/http"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	"github.com/gin-gonic/gin"
 
@@ -60,7 +61,14 @@ func AdminOperationLog(repo repository.AdminLogRepository) gin.HandlerFunc {
 
 		// 异步记录日志
 		go func() {
-			_ = repo.Create(context.Background(), logEntry)
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[AdminLog] recovered from panic: %v", r)
+				}
+			}()
+			if err := repo.Create(context.Background(), logEntry); err != nil {
+				log.Printf("[AdminLog] failed to save admin log: %v", err)
+			}
 		}()
 
 		c.Next()

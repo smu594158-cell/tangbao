@@ -6,8 +6,13 @@ import (
 
 	"backend/internal/domain"
 	"backend/pkg/errors"
-	"backend/pkg/mcp"
 )
+
+// GeoProvider 地理信息服务接口（用于解耦 mcp.Server）
+type GeoProvider interface {
+	SearchPOI(keywords, city string) ([]map[string]interface{}, error)
+	RoutePlanning(origin, destination, mode string) (map[string]interface{}, error)
+}
 
 // GeoUseCase 定义地理信息相关用例
 type GeoUseCase interface {
@@ -16,13 +21,13 @@ type GeoUseCase interface {
 }
 
 type geoUseCase struct {
-	mcpServer *mcp.Server
+	geoProvider GeoProvider
 }
 
 // NewGeoUseCase 实例一个GeoUseCase
-func NewGeoUseCase(mcpServer *mcp.Server) GeoUseCase {
+func NewGeoUseCase(geoProvider GeoProvider) GeoUseCase {
 	return &geoUseCase{
-		mcpServer: mcpServer,
+		geoProvider: geoProvider,
 	}
 }
 
@@ -31,7 +36,7 @@ func (u *geoUseCase) SearchPOIs(ctx context.Context, keywords, city string) ([]*
 		city = "杭州" // 默认杭州
 	}
 
-	rawPois, err := u.mcpServer.SearchPOI(keywords, city)
+	rawPois, err := u.geoProvider.SearchPOI(keywords, city)
 	if err != nil {
 		return nil, errors.ErrMCPServiceFailed
 	}
@@ -52,7 +57,7 @@ func (u *geoUseCase) SearchPOIs(ctx context.Context, keywords, city string) ([]*
 }
 
 func (u *geoUseCase) PlanRoute(ctx context.Context, origin, destination, mode string) (*domain.RoutePlan, *errors.AppError) {
-	rawRoute, err := u.mcpServer.RoutePlanning(origin, destination, mode)
+	rawRoute, err := u.geoProvider.RoutePlanning(origin, destination, mode)
 	if err != nil && rawRoute == nil {
 		return nil, errors.ErrMCPServiceFailed
 	}

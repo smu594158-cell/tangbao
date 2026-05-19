@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { Form, Input, Button, Card, Typography, message, Space } from 'antd'
+import { Form, Input, Button, Card, Typography, message, Space, Select } from 'antd'
 import { EnvironmentOutlined, FlagOutlined, CompassOutlined } from '@ant-design/icons'
-import axios from 'axios'
+import axios from '../utils/request'
 
 const { Title, Text } = Typography
 
@@ -204,12 +204,14 @@ const Map = () => {
               <Input prefix={<FlagOutlined />} placeholder="输入终点名称" />
             </Form.Item>
             <Form.Item label="出行方式" name="type">
-              <select className="w-full p-2 border border-gray-300 rounded-md outline-none focus:border-blue-500">
-                <option value="walking">步行</option>
-                <option value="driving">驾车</option>
-                <option value="transit">公交</option>
-                <option value="bicycling">骑行</option>
-              </select>
+              <Select
+                options={[
+                  { value: 'walking', label: '步行' },
+                  { value: 'driving', label: '驾车' },
+                  { value: 'transit', label: '公交' },
+                  { value: 'bicycling', label: '骑行' },
+                ]}
+              />
             </Form.Item>
             <Button type="primary" htmlType="submit" className="w-full bg-blue-600 mb-2" loading={loading}>
               开始规划

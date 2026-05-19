@@ -72,12 +72,4 @@ type TourRepository interface {
 	DeleteAttraction(ctx context.Context, id uint64) error
 }
 
-// TourUsecase 景点与内容业务接口
-type TourUsecase interface {
-	GetAttractionInfo(ctx context.Context, id uint64) (*Attraction, error)
-	ListAttractions(ctx context.Context, page, size int) ([]*Attraction, int64, error)
-	GenerateAttractionText(ctx context.Context, req *GenerateTextRequest) (*GeneratedText, error)
-	CreateAttraction(ctx context.Context, name, description, address string, lng, lat float64) (*Attraction, error)
-	UpdateAttraction(ctx context.Context, id uint64, name, description, address string, lng, lat float64) (*Attraction, error)
-	DeleteAttraction(ctx context.Context, id uint64) error
-}
+

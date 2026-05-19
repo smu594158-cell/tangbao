@@ -2,11 +2,14 @@ package main
 
 import (
 	"backend/internal/domain"
+	"context"
 	"log"
 	"os"
 
 	"backend/pkg/middleware"
 
+	"github.com/cloudwego/eino-ext/components/model/ollama"
+	"github.com/cloudwego/eino/components/model"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -18,6 +21,18 @@ import (
 
 	"github.com/joho/godotenv"
 )
+
+func initChatModel(baseURL string) model.ChatModel {
+	chatModel, err := ollama.NewChatModel(context.Background(), &ollama.ChatModelConfig{
+		BaseURL: baseURL,
+		Model:   "qwen:4b",
+	})
+	if err != nil {
+		log.Printf("Warning: failed to init ollama chat model: %v (AI features disabled)", err)
+		return nil
+	}
+	return chatModel
+}
 
 func main() {
 	// 0. 加载 .env 环境变量文件
@@ -44,15 +59,20 @@ func main() {
 	adminLogRepo := repository.NewMysqlAdminLogRepository(db)
 
 	// 2.2 实例化UseCase
-	jwtSecret := getEnvOrDefault("JWT_SECRET", "super_secret_key_change_me_in_prod")
+	jwtSecret := getEnvOrDefault("JWT_SECRET", "")
+	if jwtSecret == "" {
+		log.Println("WARNING: JWT_SECRET not set, using hardcoded default (insecure!)")
+		jwtSecret = "super_secret_key_change_me_in_prod"
+	}
 	authUC := usecase.NewAuthUseCase(userRepo, jwtSecret)
 	userUC := usecase.NewUserUseCase(userRepo)
 
 	// 假设本地 Ollama 跑在 11434 端口
 	ollamaBaseURL := getEnvOrDefault("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-	chatUC := usecase.NewChatUseCase(chatRepo, ollamaBaseURL)
+	llmModel := initChatModel(ollamaBaseURL)
+	chatUC := usecase.NewChatUseCase(chatRepo, llmModel)
 
-	tourUC := usecase.NewTourUsecase(tourRepo, ollamaBaseURL)
+	tourUC := usecase.NewTourUsecase(tourRepo, llmModel)
 
 	// 2.3 实例化Geo MCP Server & UseCase
 	amapKey := getEnvOrDefault("AMAP_WEB_KEY", "f02253e396de81301f40da343d8bb16b")

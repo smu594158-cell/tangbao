@@ -27,7 +27,8 @@ func (s *Server) SearchPOI(keywords, city string) ([]map[string]interface{}, err
 	params.Add("key", s.AmapKey)
 	params.Add("keywords", keywords)
 	params.Add("city", city)
-	params.Add("offset", "10") // 默认返回�?0�?	params.Add("page", "1")
+	params.Add("offset", "10") // 默认返回10条
+	params.Add("page", "1")
 
 	reqURL := fmt.Sprintf("%s?%s", baseURL, params.Encode())
 

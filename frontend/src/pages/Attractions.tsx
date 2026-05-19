@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Card, Row, Col, Typography, Tag, Spin, message, Button, Modal, Form, Input, Space, Divider } from 'antd'
 import { CompassOutlined, FireOutlined, EnvironmentOutlined, SendOutlined } from '@ant-design/icons'
-import axios from 'axios'
+import axios from '../utils/request'
 
 const { Title, Paragraph, Text } = Typography
 const { Meta } = Card
@@ -46,17 +46,10 @@ const Attractions = () => {
   }
 
   const handleGenerateByID = async (id: number) => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      message.warning('请先登录')
-      return
-    }
-
     setGenLoading(true)
     try {
       const res = await axios.post('/api/v1/tour/content/generate', 
-        { attraction_id: id, word_count: 300 },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { attraction_id: id, word_count: 300 }
       )
       
       if (res.data.code === 0) {
@@ -73,12 +66,6 @@ const Attractions = () => {
   }
 
   const handleGenerateByName = async (values: any) => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      message.warning('请先登录')
-      return
-    }
-
     if (!values.locationName) {
       message.warning('请输入地点名称')
       return
@@ -87,8 +74,7 @@ const Attractions = () => {
     setGenLoading(true)
     try {
       const res = await axios.post('/api/v1/tour/content/generate', 
-        { location_name: values.locationName, word_count: 300 },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { location_name: values.locationName, word_count: 300 }
       )
       
       if (res.data.code === 0) {

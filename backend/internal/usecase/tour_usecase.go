@@ -3,9 +3,6 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"log"
-
-	"github.com/cloudwego/eino-ext/components/model/ollama"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 
@@ -13,24 +10,26 @@ import (
 	"backend/pkg/errors"
 )
 
+// TourUsecase 景点与内容业务接口
+type TourUsecase interface {
+	GetAttractionInfo(ctx context.Context, id uint64) (*domain.Attraction, error)
+	ListAttractions(ctx context.Context, page, size int) ([]*domain.Attraction, int64, error)
+	GenerateAttractionText(ctx context.Context, req *domain.GenerateTextRequest) (*domain.GeneratedText, error)
+	CreateAttraction(ctx context.Context, name, description, address string, lng, lat float64) (*domain.Attraction, error)
+	UpdateAttraction(ctx context.Context, id uint64, name, description, address string, lng, lat float64) (*domain.Attraction, error)
+	DeleteAttraction(ctx context.Context, id uint64) error
+}
+
 type tourUsecase struct {
 	repo     domain.TourRepository
 	llmModel model.ChatModel
 }
 
 // NewTourUsecase 实例化旅游内容服务
-func NewTourUsecase(repo domain.TourRepository, ollamaBaseURL string) domain.TourUsecase {
-	chatModel, err := ollama.NewChatModel(context.Background(), &ollama.ChatModelConfig{
-		BaseURL: ollamaBaseURL,
-		Model:   "qwen:4b",
-	})
-	if err != nil {
-		log.Fatalf("failed to init ollama chat model for tour: %v", err)
-	}
-
+func NewTourUsecase(repo domain.TourRepository, llmModel model.ChatModel) TourUsecase {
 	return &tourUsecase{
 		repo:     repo,
-		llmModel: chatModel,
+		llmModel: llmModel,
 	}
 }
 
@@ -105,6 +104,10 @@ func (u *tourUsecase) DeleteAttraction(ctx context.Context, id uint64) error {
 }
 
 func (u *tourUsecase) GenerateAttractionText(ctx context.Context, req *domain.GenerateTextRequest) (*domain.GeneratedText, error) {
+	if u.llmModel == nil {
+		return nil, errors.ErrChatModelFailed
+	}
+
 	var targetName string
 	var targetDesc string
 

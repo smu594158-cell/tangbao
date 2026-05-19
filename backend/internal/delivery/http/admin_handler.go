@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"backend/internal/domain"
 	"backend/internal/usecase"
 	"backend/pkg/errors"
 	"backend/pkg/response"
@@ -14,10 +13,10 @@ import (
 
 type AdminHandler struct {
 	userUseCase usecase.UserUseCase
-	tourUseCase domain.TourUsecase
+	tourUseCase usecase.TourUsecase
 }
 
-func NewAdminHandler(r *gin.RouterGroup, uc usecase.UserUseCase, tc domain.TourUsecase) {
+func NewAdminHandler(r *gin.RouterGroup, uc usecase.UserUseCase, tc usecase.TourUsecase) {
 	handler := &AdminHandler{
 		userUseCase: uc,
 		tourUseCase: tc,
@@ -40,12 +39,16 @@ func NewAdminHandler(r *gin.RouterGroup, uc usecase.UserUseCase, tc domain.TourU
 }
 
 func (h *AdminHandler) ListUsers(c *gin.Context) {
-	pageStr := c.DefaultQuery("page", "1")
-	sizeStr := c.DefaultQuery("size", "10")
 	keyword := c.Query("keyword")
 
-	page, _ := strconv.Atoi(pageStr)
-	size, _ := strconv.Atoi(sizeStr)
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	size, err := strconv.Atoi(c.DefaultQuery("size", "10"))
+	if err != nil || size < 1 {
+		size = 10
+	}
 
 	users, total, appErr := h.userUseCase.ListUsers(c.Request.Context(), page, size, keyword)
 	if appErr != nil {
@@ -89,8 +92,11 @@ type UpdateUserRequest struct {
 }
 
 func (h *AdminHandler) UpdateUser(c *gin.Context) {
-	idStr := c.Param("id")
-	id, _ := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusOK, response.Error(errors.ErrInvalidParam))
+		return
+	}
 
 	var req UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -108,8 +114,11 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 }
 
 func (h *AdminHandler) DeleteUser(c *gin.Context) {
-	idStr := c.Param("id")
-	id, _ := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusOK, response.Error(errors.ErrInvalidParam))
+		return
+	}
 
 	appErr := h.userUseCase.DeleteUser(c.Request.Context(), id)
 	if appErr != nil {
@@ -137,23 +146,26 @@ func (h *AdminHandler) CreateAttraction(c *gin.Context) {
 
 	attraction, err := h.tourUseCase.CreateAttraction(c.Request.Context(), req.Name, req.Description, req.Address, req.LocationLng, req.LocationLat)
 	if err != nil {
-		c.JSON(http.StatusOK, response.Error(errors.New(500, "保存失败")))
+		c.JSON(http.StatusOK, response.Error(errors.ErrInternalServer))
 		return
 	}
 	c.JSON(http.StatusOK, response.Success(attraction))
 }
 
-type UpdateAttractionRequest struct {
-	Name        string  `json:"name" binding:"required"`
-	Description string  `json:"description" binding:"required"`
-	Address     string  `json:"address" binding:"required"`
-	LocationLng float64 `json:"location_lng" binding:"required"`
-	LocationLat float64 `json:"location_lat" binding:"required"`
-}
-
 func (h *AdminHandler) UpdateAttraction(c *gin.Context) {
-	idStr := c.Param("id")
-	id, _ := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusOK, response.Error(errors.ErrInvalidParam))
+		return
+	}
+
+	type UpdateAttractionRequest struct {
+		Name        string  `json:"name" binding:"required"`
+		Description string  `json:"description" binding:"required"`
+		Address     string  `json:"address" binding:"required"`
+		LocationLng float64 `json:"location_lng" binding:"required"`
+		LocationLat float64 `json:"location_lat" binding:"required"`
+	}
 
 	var req UpdateAttractionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -163,19 +175,22 @@ func (h *AdminHandler) UpdateAttraction(c *gin.Context) {
 
 	attraction, err := h.tourUseCase.UpdateAttraction(c.Request.Context(), id, req.Name, req.Description, req.Address, req.LocationLng, req.LocationLat)
 	if err != nil {
-		c.JSON(http.StatusOK, response.Error(errors.New(500, "更新失败")))
+		c.JSON(http.StatusOK, response.Error(errors.ErrInternalServer))
 		return
 	}
 	c.JSON(http.StatusOK, response.Success(attraction))
 }
 
 func (h *AdminHandler) DeleteAttraction(c *gin.Context) {
-	idStr := c.Param("id")
-	id, _ := strconv.ParseUint(idStr, 10, 64)
-
-	err := h.tourUseCase.DeleteAttraction(c.Request.Context(), id)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusOK, response.Error(errors.New(500, "删除失败")))
+		c.JSON(http.StatusOK, response.Error(errors.ErrInvalidParam))
+		return
+	}
+
+	err = h.tourUseCase.DeleteAttraction(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusOK, response.Error(errors.ErrInternalServer))
 		return
 	}
 	c.JSON(http.StatusOK, response.Success(nil))

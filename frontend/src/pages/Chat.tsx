@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Input, Button, List, Avatar, Spin, message } from 'antd'
 import { SendOutlined, UserOutlined, RobotOutlined } from '@ant-design/icons'
-import axios from 'axios'
+import axios from '../utils/request'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -36,21 +36,10 @@ const Chat = () => {
     setLoading(true)
 
     try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        message.warning('请先登录')
-        return
-      }
-
       const res = await axios.post('/api/v1/chat/message', 
         {
           session_id: sessionId,
           content: userMsg
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
         }
       )
 

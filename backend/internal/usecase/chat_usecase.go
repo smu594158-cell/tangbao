@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/cloudwego/eino-ext/components/model/ollama"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 
@@ -25,23 +24,18 @@ type chatUseCase struct {
 }
 
 // NewChatUseCase 实例化对话应用服务
-func NewChatUseCase(repo repository.ChatRepository, ollamaBaseURL string) ChatUseCase {
-	// 初始化eino和ollama ChatModel 组件
-	chatModel, err := ollama.NewChatModel(context.Background(), &ollama.ChatModelConfig{
-		BaseURL: ollamaBaseURL, //  "http://localhost:11434"
-		Model:   "qwen:4b",
-	})
-	if err != nil {
-		log.Fatalf("failed to init ollama chat model: %v", err)
-	}
-
+func NewChatUseCase(repo repository.ChatRepository, llmModel model.ChatModel) ChatUseCase {
 	return &chatUseCase{
 		repo:     repo,
-		llmModel: chatModel,
+		llmModel: llmModel,
 	}
 }
 
 func (u *chatUseCase) SendMessage(ctx context.Context, userID uint64, sessionID, content string) (string, *errors.AppError) {
+	if u.llmModel == nil {
+		return "", errors.ErrChatModelFailed
+	}
+
 	// 1. 获取历史对话记录 (取最近的10条作为上下文)
 	histories, err := u.repo.GetHistoriesBySessionID(ctx, userID, sessionID, 10)
 	if err != nil {
@@ -72,12 +66,19 @@ func (u *chatUseCase) SendMessage(ctx context.Context, userID uint64, sessionID,
 
 	// 3. 异步保存用户的提问到数据库
 	go func() {
-		_ = u.repo.SaveHistory(context.Background(), &domain.ChatHistory{
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[Chat] recovered from panic in save user history: %v", r)
+			}
+		}()
+		if err := u.repo.SaveHistory(context.Background(), &domain.ChatHistory{
 			UserID:    userID,
 			SessionID: sessionID,
 			Role:      "user",
 			Content:   content,
-		})
+		}); err != nil {
+			log.Printf("[Chat] failed to save user history: %v", err)
+		}
 	}()
 
 	// 4. 调用 eino 的Generate 方法获取 AI 回复
@@ -91,12 +92,19 @@ func (u *chatUseCase) SendMessage(ctx context.Context, userID uint64, sessionID,
 
 	// 5. 异步保存 AI 的回复到数据库
 	go func() {
-		_ = u.repo.SaveHistory(context.Background(), &domain.ChatHistory{
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[Chat] recovered from panic in save assistant history: %v", r)
+			}
+		}()
+		if err := u.repo.SaveHistory(context.Background(), &domain.ChatHistory{
 			UserID:    userID,
 			SessionID: sessionID,
 			Role:      "assistant",
 			Content:   aiReply,
-		})
+		}); err != nil {
+			log.Printf("[Chat] failed to save assistant history: %v", err)
+		}
 	}()
 
 	return aiReply, nil
